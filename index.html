@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Group Photo Attendance System</title>
+<!-- Face-API.js CDN -->
+<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<style>
+:root{--navy:#142746;--blue:#2167d5;--bg:#f4f7ff;--muted:#61718d}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#172642}
+.layout{display:flex;min-height:100vh}.sidebar{width:235px;background:linear-gradient(180deg,#142746,#244674);color:#fff;padding:22px 14px;flex-shrink:0}
+.brand{font-weight:700;font-size:19px;line-height:1.35;margin:5px 8px 28px}.nav{display:block;width:100%;text-align:left;padding:13px 12px;margin:6px 0;border:0;border-radius:9px;background:transparent;color:#fff;font-size:15px;cursor:pointer}.nav.active,.nav:hover{background:#315c9d}
+.sidefoot{font-size:12px;line-height:1.5;margin:45px 8px 0;color:#d9e5fb}
+main{padding:25px;width:calc(100% - 235px);max-width:1400px;margin:auto}
+.hero,.card{background:#fff;border:1px solid #e0e7f5;border-radius:17px;padding:22px;margin-bottom:18px;box-shadow:0 5px 18px #1b31500b}
+.hero{background:linear-gradient(120deg,#fff,#eaf1ff)}h1{margin:0 0 8px;font-size:clamp(25px,3vw,38px);color:var(--navy)}h2{margin-top:0;color:var(--navy)}p{color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.tile{padding:18px;border:1px solid #e1e8f6;border-radius:14px;background:#fff}.btn{background:var(--blue);color:white;border:0;padding:12px 16px;border-radius:9px;font-weight:700;cursor:pointer;margin:6px 4px 6px 0}.btn.secondary{background:#e8efff;color:#16478f}.btn.green{background:#16834b}.btn:disabled{background:#a5bce6;cursor:not-allowed}
+input,select{padding:10px;border:1px solid #ccd7ea;border-radius:8px;font-size:15px;max-width:100%}input[type=text]{width:100%}.upload{display:block;width:100%;padding:14px;border:1px dashed #91a9d1;border-radius:10px;background:#f8faff;margin:10px 0}
+.photo{width:100%;max-height:400px;object-fit:contain;border-radius:12px;background:#edf1f7;margin-top:10px}.hidden{display:none!important}
+.student-row{display:grid;grid-template-columns:1fr 1.5fr 1.5fr 1fr;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #e8edf6}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #e8edf6}
+.row.head{font-weight:700;color:var(--navy)}.badge{padding:6px 10px;border-radius:20px;font-size:13px;font-weight:700}.present{background:#d6f8e5;color:#08733b}.absent{background:#ffe1e1;color:#b32626}
+.metricrow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{background:#f6f8ff;padding:16px;border-radius:12px}.metric b{display:block;font-size:25px;margin-top:8px}
+.note{background:#fff7dd;border:1px solid #f0d98a;border-radius:10px;padding:13px;color:#6c5716;font-size:14px;line-height:1.5;margin-bottom:15px}
+@media(max-width:760px){.layout{display:block}.sidebar{width:100%;padding:12px}.brand{margin:3px 8px 12px}.nav{display:inline-block;width:auto;margin:3px;padding:9px}.sidefoot{display:none}main{width:100%;padding:13px}.grid{grid-template-columns:1fr}.student-row,.row{grid-template-columns:1fr;font-size:13px}.hero,.card{padding:16px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="brand">📸 Group Photo<br>Attendance System</div>
+<button class="nav active" data-page="home">⌂ &nbsp; Home</button>
+<button class="nav" data-page="students">♙ &nbsp; Register Students</button>
+<button class="nav" data-page="mark">▣ &nbsp; Mark Attendance</button>
+<button class="nav" data-page="report">▤ &nbsp; Attendance Report</button>
+<div class="sidefoot">TYBSc Computer Science<br>Project Demo</div>
+</aside>
+<main>
+<section id="home" class="page">
+<div class="hero"><h1>Group Photo Attendance System</h1><p>Register students with individual photos, upload a group photo, and detect attendance automatically using Face Recognition.</p><b>👥 Face-API &nbsp; • &nbsp; 📷 Photo Recognition &nbsp; • &nbsp; 📄 Report</b></div>
+<div class="grid">
+<div class="tile"><h2>👤 Register Students</h2><p>Add student info & upload face photo.</p><button class="btn" onclick="go('students')">Open Student Details</button></div>
+<div class="tile"><h2>📷 Upload Group Photo</h2><p>Choose group photo for face matching.</p><button class="btn" onclick="go('mark')">Upload Photo</button></div>
+<div class="tile"><h2>✅ Mark Attendance</h2><p>Verify detected attendance results.</p><button class="btn" onclick="go('mark')">Mark Attendance</button></div>
+<div class="tile"><h2>⬇️ Attendance Report</h2><p>View final report and download CSV.</p><button class="btn" onclick="go('report')">View Report</button></div>
+</div>
+</section>
+
+<section id="students" class="page hidden">
+<div class="card"><h1>Register Students & Face Photos</h1><p>Add roll number, name, and upload a clear individual photo for each student.</p>
+<div style="font-weight:700; color:var(--navy); margin-bottom:10px;" class="student-row"><div>Roll No</div><div>Name</div><div>Individual Face Photo</div><div>Action</div></div>
+<div id="studentEditor"></div>
+<br>
+<button class="btn" onclick="addStudent()">＋ Add Student</button>
+<button class="btn green" onclick="saveStudents()">Save & Process Student Faces</button>
+</div>
+</section>
+
+<section id="mark" class="page hidden">
+<div class="card"><h1>Mark Attendance</h1>
+<div id="modelStatus" class="note">Loading face recognition models... Please wait.</div>
+<p>Upload today's group photo:</p>
+<input class="upload" type="file" accept="image/*" id="photoUpload">
+<img id="todayPhoto" class="photo hidden" alt="Uploaded attendance photo">
+<br><br>
+<button class="btn" id="recognizeBtn" onclick="detectFacesAndMark()" disabled>Detect Faces & Match Attendance</button>
+<div id="recognitionSummary" style="margin-top:15px; font-weight:bold; color:var(--navy);"></div>
+<h2 style="margin-top:22px">Review Attendance Status</h2>
+<div id="attendanceEditor"></div>
+<br>
+<button class="btn green" onclick="markAndSave()">Save Attendance & View Report</button>
+</div>
+</section>
+
+<section id="report" class="page hidden">
+<div class="card"><h1>Attendance Report</h1><div class="metricrow">
+<div class="metric">Total Students<b id="total">0</b></div><div class="metric">Present<b id="presentCount">0</b></div><div class="metric">Absent<b id="absentCount">0</b></div>
+</div><div id="reportTable" style="margin-top:18px"></div><br>
+<button class="btn" onclick="downloadCSV()">⬇️ Download Report (CSV)</button></div>
+</section>
+</main></div>
+
+<script>
+// LocalStorage madhun save keleli mahiti load karnyasathi
+let students = JSON.parse(localStorage.getItem('saved_students')) || [
+  { id: 1, name: "Aarav Sharma", roll: "101", photoData: null, status: "Absent" },
+  { id: 2, name: "Priya Patil", roll: "102", photoData: null, status: "Absent" }
+];
+
+// Navigation logic
+function go(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(pageId).classList.remove('hidden');
+  document.querySelectorAll('.nav').forEach(n => {
+    n.classList.toggle('active', n.getAttribute('data-page') === pageId);
+  });
+}
+
+document.querySelectorAll('.nav').forEach(btn => {
+  btn.addEventListener('click', () => go(btn.getAttribute('data-page')));
+});
+
+function renderStudents() {
+  const container = document.getElementById('studentEditor');
+  container.innerHTML = students.map((s, idx) => `
+    <div class="student-row">
+      <input type="text" value="${s.roll}" placeholder="Roll No" onchange="updateStudent(${idx}, 'roll', this.value)">
+      <input type="text" value="${s.name}" placeholder="Student Name" onchange="updateStudent(${idx}, 'name', this.value)">
+      <input type="file" accept="image/*" onchange="handleStudentPhoto(event, ${idx})">
+      <button class="btn secondary" onclick="removeStudent(${idx})">Delete</button>
+    </div>
+  `).join('');
+}
+
+function addStudent() {
+  students.push({ id: Date.now(), name: "", roll: "", photoData: null, status: "Absent" });
+  renderStudents();
+}
+
+function updateStudent(idx, field, val) {
+  students[idx][field] = val;
+}
+
+function handleStudentPhoto(event, idx) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      students[idx].photoData = e.target.result;
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeStudent(idx) {
+  students.splice(idx, 1);
+  renderStudents();
+}
+
+function saveStudents() {
+  // Browser madhe permanent store karnyasathi
+  localStorage.setItem('saved_students', JSON.stringify(students));
+  alert("Student details and photos saved permanently!");
+  renderAttendanceReview();
+}
+
+function renderAttendanceReview() {
+  const container = document.getElementById('attendanceEditor');
+  container.innerHTML = `
+    <div class="row head"><div>Roll No</div><div>Name</div><div>Status</div></div>
+    ` + students.map((s, idx) => `
+      <div class="row">
+        <div>${s.roll}</div>
+        <div>${s.name}</div>
+        <div>
+          <select onchange="students[${idx}].status = this.value">
+            <option value="Present" ${s.status==='Present'?'selected':''}>Present</option>
+            <option value="Absent" ${s.status==='Absent'?'selected':''}>Absent</option>
+          </select>
+        </div>
+      </div>
+    `).join('');
+}
+
+function markAndSave() {
+  go('report');
+  updateReport();
+}
+
+function updateReport() {
+  const present = students.filter(s => s.status === 'Present').length;
+  const absent = students.length - present;
+  document.getElementById('total').innerText = students.length;
+  document.getElementById('presentCount').innerText = present;
+  document.getElementById('absentCount').innerText = absent;
+
+  document.getElementById('reportTable').innerHTML = `
+    <div class="row head"><div>Roll</div><div>Name</div><div>Status</div></div>
+    ` + students.map(s => `
+      <div class="row">
+        <div>${s.roll}</div>
+        <div>${s.name}</div>
+        <div><span class="badge ${s.status === 'Present' ? 'present' : 'absent'}">${s.status}</span></div>
+      </div>
+    `).join('');
+}
+
+function downloadCSV() {
+  let csv = 'Roll No,Name,Status\n' + students.map(s => `${s.roll},${s.name},${s.status}`).join('\n');
+  let blob = new Blob([csv], { type: 'text/csv' });
+  let url = window.URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.setAttribute('href', url);
+  a.setAttribute('download', 'attendance_report.csv');
+  a.click();
+}
+
+// Load Face-API models
+async function loadModels() {
+  try {
+    document.getElementById('modelStatus').innerText = "Loading face recognition models from CDN... Please wait.";
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+    document.getElementById('modelStatus').innerText = "Models loaded successfully! You can register students and upload photos.";
+    document.getElementById('modelStatus').style.background = "#d6f8e5";
+    document.getElementById('modelStatus').style.color = "#08733b";
+    document.getElementById('recognizeBtn').disabled = false;
+  } catch (error) {
+    document.getElementById('modelStatus').innerText = "Error loading models: " + error.message;
+    document.getElementById('modelStatus').style.background = "#ffe1e1";
+    document.getElementById('modelStatus').style.color = "#b32626";
+  }
+}
+
+// Handle group photo preview
+document.getElementById('photoUpload').addEventListener('change', function(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById('todayPhoto');
+      img.src = e.target.result;
+      img.classList.remove('hidden');
+    }
+    reader.readAsDataURL(file);
+  }
+});
+
+// Detect faces and match with registered student photos using FaceMatcher
+async function detectFacesAndMark() {
+  const img = document.getElementById('todayPhoto');
+  if (img.classList.contains('hidden') || !img.src) {
+    alert("Krupaya pahile group photo upload kara!");
+    return;
+  }
+
+  document.getElementById('recognitionSummary').innerText = "Processing student reference photos & matching faces...";
+
+  try {
+    const labeledDescriptors = [];
+    for (let s of students) {
+      if (s.photoData) {
+        const studentImg = await faceapi.fetchImage(s.photoData);
+        const detection = await faceapi.detectSingleFace(studentImg).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.roll, [detection.descriptor]));
+        }
+      }
+    }
+
+    if (labeledDescriptors.length === 0) {
+      alert("Krupaya 'Register Students' madhe kamit kami eka studentcha photo upload kara!");
+      document.getElementById('recognitionSummary').innerText = "No student reference photos found.";
+      return;
+    }
+
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.65);
+
+    const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+
+    students.forEach(s => s.status = "Absent");
+
+    let matchedCount = 0;
+    detections.forEach(d => {
+      const bestMatch = faceMatcher.findBestMatch(d.descriptor);
+      console.log("Match found:", bestMatch.toString());
+      if (bestMatch && bestMatch.label !== 'unknown') {
+        const matchedStudent = students.find(s => s.roll === bestMatch.label);
+        if (matchedStudent) {
+          matchedStudent.status = "Present";
+          matchedCount++;
+        }
+      }
+    });
+
+    renderAttendanceReview();
+    document.getElementById('recognitionSummary').innerText = `Face recognition completed! Found ${detections.length} faces, matched ${matchedCount} students automatically.`;
+    alert(`Automatic attendance marked! ${matchedCount} students found present.`);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('recognitionSummary').innerText = "Error during face recognition process.";
+  }
+}
+
+window.onload = () => {
+  loadModels();
+  renderStudents();
+  renderAttendanceReview();
+  updateReport();
+};
+</script>
+</body>
+</html>
